@@ -12,7 +12,7 @@ use strict;
 use warnings;
 
 use File::Basename qw( basename );
-use Getopt::Long;
+use List::Util qw( first );
 use Term::ANSIColor qw( :constants );
 
 # The directory containing the mvn or mvnDebug executables that we will wrap
@@ -54,11 +54,13 @@ sub main {
 
 	my $color = 'auto';
 
-    my $successful = GetOptions(
-		'color:s' => \$color,
-	);
+	my $color_arg_idx = first { $ARGV[$_] =~ m/^--color=/ } 0 .. ($#ARGV);
 
-	$successful or die "Usage: $exe [ --color[=auto|always|never] ] mvn_opts...\n";
+	if (defined $color_arg_idx) {
+		(undef,$color) = split /=/, $ARGV[$color_arg_idx], 2;
+		# Remove the argument so that is it not passed to Maven
+		splice @ARGV, $color_arg_idx, 1;
+	}
 
 	($color eq 'auto' or $color eq 'never' or $color = 'always')
 		or die "Usage: $exe [ --color[=auto|always|never] ] mvn_opts...\n";
