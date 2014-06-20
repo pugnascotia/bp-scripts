@@ -1,0 +1,148 @@
+#!/usr/bin/perl -w
+
+# rory.hunter@blackpepper.co.uk Mon Jun  9 15:40:40 BST 2014
+# Maven, with colours!
+#
+# You should edit this script to set the correct location of the maven
+# executables.
+
+# FIXME this doesn't work very well with interactive input.
+
+use strict;
+use warnings;
+
+use File::Basename qw( basename );
+use Getopt::Long;
+use Term::ANSIColor qw( :constants );
+
+# The directory containing the mvn or mvnDebug executables that we will wrap
+my $mvn_dir = '/usr/local/bin';
+
+# *cough* global variable
+my $line;
+
+main();
+
+#-------------------------------------------------------------------------------
+
+sub format_line {
+	format_level();
+	format_banner();
+	format_test_summary();
+	format_build_outcome();
+	format_plugin_info();
+
+	print $line;
+
+	# Always reset
+	print RESET;
+}
+
+#-------------------------------------------------------------------------------
+
+sub main {
+
+	unless (-d $mvn_dir) {
+		die "Don't know where to find the maven executables. Have you set \$mvn_dir correctly?";
+	}
+
+	my $exe = basename($0); 
+
+	unless ( $exe eq 'mvn' or $exe eq 'mvnDebug' ) {
+		die "I must be invoked as mvn or mvnDebug";
+	}
+
+	my $color = 'auto';
+
+    my $successful = GetOptions(
+		'color:s' => \$color,
+	);
+
+	$successful or die "Usage: $exe [ --color[=auto|always|never] ] mvn_opts...\n";
+
+	($color eq 'auto' or $color eq 'never' or $color = 'always')
+		or die "Usage: $exe [ --color[=auto|always|never] ] mvn_opts...\n";
+
+	my $real_mvn = $mvn_dir . '/' . $exe;
+
+	if ($color eq 'never' or ($color eq 'auto' and not -t STDOUT)) {
+		exec $real_mvn,, @ARGV;
+		die "Failed to exec: $!";
+	}
+
+	open MVN, '-|', ($mvn_dir.'/'.$exe), @ARGV
+		or die "Failed to start mvn: $!";
+
+	while ($line = <MVN>) {
+		format_line();
+	}
+
+	close MVN;
+
+	exit 0;
+}
+
+#-------------------------------------------------------------------------------
+
+sub format_level {
+	my ($level) = @_;
+
+	my %colors;
+	$colors{'WARNING'} = YELLOW;
+	$colors{'ERROR'} = RED;
+	$colors{'DEBUG'} = GREEN;
+	$colors{'INFO'} = CYAN;
+
+	my $regex = join '|', map { "\\s*$_\\s*" } keys %colors;
+
+	$line =~ s/^(\[($regex)\])/$colors{trim($2)} . $1 . RESET/e;
+}
+
+#-------------------------------------------------------------------------------
+
+sub format_banner {
+
+	$line =~ s/(-{50,})$/BOLD . GREEN . $1 . RESET/e;
+	$line =~ s/(T E S T S)/BOLD . GREEN . $1 . RESET/e;
+}
+
+#-------------------------------------------------------------------------------
+
+sub format_test_summary {
+	$line =~ s/Tests run: ([^,]*), Failures: ([^,]*), Errors: ([^,]*), Skipped: ([^,]*)/
+		BOLD . GREEN . "Tests run: " . $1 . RESET .
+		", Failures: " . BOLD . RED . $2 . RESET .
+		", Errors: " . BOLD . RED . $3 . RESET .
+		", Skipped: " . BOLD . YELLOW . $4 . RESET/ge;
+
+	# Not all test result lines have this, so perform it separately
+	$line =~ s/Time elapsed: ([\d.]+)/"Time elapsed: " . BOLD . CYAN . $1 . RESET/e;
+}
+
+#-------------------------------------------------------------------------------
+
+sub format_build_outcome {
+	$line =~ s/BUILD SUCCESS/BOLD . GREEN . 'BUILD SUCCESS' . RESET/e;
+	$line =~ s/BUILD FAILURE/BOLD . RED . 'BUILD FAILURE' . RESET/e;
+
+	$line =~ s/(SUCCESS \[[\d.]+s\])$/BOLD . GREEN . $1 . RESET/e;
+	$line =~ s/(FAILURE \[[\d.]+s\])$/BOLD . RED . $1 . RESET/e;
+	$line =~ s/(SKIPPED)$/BOLD . YELLOW . $1 . RESET/e;
+
+	$line =~ s/Total time: ([\d.]+s)/"Total time: " . CYAN . $1 . RESET/e;
+}
+
+#-------------------------------------------------------------------------------
+
+sub format_plugin_info {
+	$line =~ s/(--- .*? ---)$/CYAN . $1 . RESET/e;
+}
+
+#-------------------------------------------------------------------------------
+
+sub trim {
+	my $value = shift;
+	$value =~ s/^\s+//;
+	$value =~ s/\s+$//;
+	return $value;
+}
