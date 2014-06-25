@@ -75,7 +75,7 @@ sub main {
         die "Failed to exec: $!";
     }
 
-    open MVN, '-|', ($mvn_dir.'/'.$exe), @ARGV
+    open MVN, "$mvn_dir/$exe " . join (" ", @ARGV) . " 2>&1 |"
         or die "Failed to start mvn: $!";
 
     while ($line = <MVN>) {
@@ -147,22 +147,23 @@ sub format_plugin_info {
 #-------------------------------------------------------------------------------
 
 sub format_stacktrace {
-    $line =~ s/^(\tat )((?:\w+\.))+([\w\$]+)\((\w+)\.java:(\d+)\)/
+    $line =~ s/ ^ (\tat\s) ( (?:[\w\$]+\.)+ )+ (<?[\w\$]+>?) \( (\w+) \.java: (\d+) \) /
         BOLD . RED . $1 .
         RESET . $2 .
-        GREEN . $3 . '(' .
+        GREEN . $3 .
+        RESET . '(' .
         RED . $4 .
         RESET . '.java:' .
         CYAN . $5 .
-        RESET
-    /e;
+        RESET . ')'
+    /ex;
 
-    $line =~ s/^(\tat )((?:\w+\.))+([\w\$]+)\(<generated>\)/
+    $line =~ s/^(\tat )((?:[\w\$]+\.))+(<?[\w\$]+>?)\((<generated>|Native Method)\)/
         BOLD . RED . $1 .
         RESET . $2 .
         GREEN . $3 . '(' .
         RED . $4 .
-        '(<generated>)' .
+        '($5)' .
         RESET
     /e;
 }
