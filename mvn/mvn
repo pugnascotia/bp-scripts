@@ -98,6 +98,7 @@ sub format_level {
     $colors{'ERROR'} = RED;
     $colors{'DEBUG'} = GREEN;
     $colors{'INFO'} = CYAN;
+    $colors{'TRACE'} = MAGENTA;
 
     my $regex = join '|', map { "\\s*$_\\s*" } keys %colors;
 

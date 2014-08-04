@@ -1,0 +1,61 @@
+#!/usr/bin/perl -w
+
+use strict;
+use warnings;
+
+use Getopt::Std;
+
+our $opt_p = ''; # profile
+
+sub main {
+    getopt('p:');
+
+    my @files = grep /V\d+_\d+__.*\.(?:sql|java)$/,
+                qx( git ls-files );
+
+    chomp @files;
+
+    if (defined $opt_p and length $opt_p) {
+        @files = grep { ($_ !~ m#/profile/#) or ($_ =~ m#/profile/$opt_p/#) } @files;
+    }
+
+    my @tuples;
+
+    foreach my $file (@files ) {
+        $file =~ /V(\d+)_(\d+)__/;
+        my $sortable_version = sprintf '%d.%02d', $1, $2;
+        my $display_version = "$1.$2";
+
+        push @tuples, {
+            sortable_version => $sortable_version,
+            display_version => $display_version,
+            file => $file,
+        };
+    }
+
+    my @sorted_tuples = sort { $a->{sortable_version} <=> $b->{sortable_version} } @tuples;
+
+    foreach my $tuple (@sorted_tuples) {
+
+        print $tuple->{display_version}, "\t", $tuple->{file}, "\n";
+    }
+
+}
+
+#-------------------------------------------------------------------------------
+
+sub usage {
+
+    print STDERR <<EOF;
+Usage: $0 [ options ]
+
+Displays all Flyway <http://www.flywaydb.org/> migration scripts or Java
+sources in the order they will be run, given a basic numerical ordering.
+
+Options:
+
+    -p Omit scripts for Maven profiles other than the one specified
+
+EOF
+    exit 1;
+}
