@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# Replaces JUnit assertions with Hamcrest versions.
+#
+# Usage: hamify <file>
+#
+# Note that imports need to be manually fixed up after execution.
+
+FILE=$1
+
+if [ $# != 1 ] || [ ! -f $FILE ];
+then
+  echo "Usage: hamify <file>"
+  exit 1
+fi
+
+sed -i 's/assertEquals(\(.*\), \(.*\));/assertThat(\2, is(\1));/g' $FILE
+sed -i 's/assertNull(\(.*\));/assertThat(\1, is(nullValue()));/g' $FILE
+sed -i 's/assertTrue(\(.*\));/assertThat(\1, is(true));/g' $FILE
