@@ -9,6 +9,8 @@ Useful scripts written by Black Pepper Software Ltd.
 	  history.
     - git-ls-flyway - list all [Flyway](http://www.flywaydb.org/) migration
       scripts in the order they will be run.
+- java/
+	- hamify - replaces JUnit assertions with Hamcrest versions
 - mvn/
 	- mvn - a wrapper script that colorises Maven output. Originally
 	  inspired by a shell script gist, but rewritten in Perl.
