@@ -17,3 +17,4 @@ fi
 sed -i 's/assertEquals(\(.*\), \(.*\));/assertThat(\2, is(\1));/g' $FILE
 sed -i 's/assertNull(\(.*\));/assertThat(\1, is(nullValue()));/g' $FILE
 sed -i 's/assertTrue(\(.*\));/assertThat(\1, is(true));/g' $FILE
+sed -i 's/assertFalse(\(.*\));/assertThat(\1, is(false));/g' $FILE
