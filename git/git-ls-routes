@@ -23,15 +23,10 @@ foreach my $file (sort keys %routes) {
             if ($produces =~ m/^MediaType\.([A-Z]+)_([A-Z]+)_VALUE$/) {
                 $produces = lc($1) . '/' . lc($2);
             }
-            printf "\t%s%s%s => %s%s%s, produces = %s\n",
-                RED, $route->{method}, RESET,
-                CYAN, $route->{value}, RESET,
-                $produces;
+            print_route_produces($route->{method}, $route->{value}, $produces);
         }
         else {
-            printf "\t%s%s%s => %s%s%s\n",
-                RED, $route->{method}, RESET,
-                CYAN, $route->{value}, RESET;
+            print_route($route->{method}, $route->{value});
         }
     }
 
@@ -131,4 +126,28 @@ sub extract_constants {
     }
 
     return \%constants;
+}
+
+#-------------------------------------------------------------------------------
+
+sub print_route {
+    my ($method,$url) = @_;
+
+    my $pattern = -t STDOUT
+        ? sprintf "\t%s%%s%s => %s%%s%s\n", RED, RESET, CYAN, RESET
+        : "\t%s => %s\n";
+
+    printf $pattern, $method, $url;
+}
+
+#-------------------------------------------------------------------------------
+
+sub print_route_produces {
+    my ($method,$url, $produces) = @_;
+
+    my $pattern = -t STDOUT
+        ? sprintf "\t%s%%s%s => %s%%s%s, produces = %%s\n", RED, RESET, CYAN, RESET
+        : "\t%s => %s, produces = %s\n";
+
+    printf $pattern, $method, $url, $produces;
 }
