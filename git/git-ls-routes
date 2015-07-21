@@ -1,0 +1,134 @@
+#!/usr/bin/perl -w
+
+use strict;
+use warnings;
+
+use Term::ANSIColor qw( :constants );
+
+my @files = find_files();
+
+my %routes;
+
+foreach my $file (@files) {
+    $routes{$file} = find_routes($file);
+}
+
+foreach my $file (sort keys %routes) {
+    print $file, "\n";
+
+    foreach my $route (sort { $a->{method} cmp $b->{method} || $a->{value} cmp $b->{value} } @{ $routes{$file} }) {
+        if (exists $route->{produces}) {
+            # MediaType.APPLICATION_JSON_VALUE
+            my $produces = $route->{produces};
+            if ($produces =~ m/^MediaType\.([A-Z]+)_([A-Z]+)_VALUE$/) {
+                $produces = lc($1) . '/' . lc($2);
+            }
+            printf "\t%s%s%s => %s%s%s, produces = %s\n",
+                RED, $route->{method}, RESET,
+                CYAN, $route->{value}, RESET,
+                $produces;
+        }
+        else {
+            printf "\t%s%s%s => %s%s%s\n",
+                RED, $route->{method}, RESET,
+                CYAN, $route->{value}, RESET;
+        }
+    }
+
+    print "\n";
+}
+
+#-------------------------------------------------------------------------------
+
+sub find_routes {
+    my ($file) = @_;
+
+    my $content_ref = slurp($file);
+
+    my @annotations = extract_annotations($content_ref);
+
+    my @configurations = map extract_route_config($_), @annotations;
+
+    my $constants = extract_constants($content_ref);
+
+    foreach my $config (@configurations) {
+        while (my ($method,$route) = each %$config) {
+            if (exists $constants->{$route}) {
+                $config->{$method} = $constants->{$route};
+            }
+        }
+    }
+
+    return \@configurations;
+}
+
+#-------------------------------------------------------------------------------
+
+sub slurp {
+    my ($file) = @_;
+
+    open FILE, '<', $file or die "Failed to open $file: $!";
+    local $/ = undef;
+    my $content = <FILE>;
+    close FILE;
+
+    return \$content;
+}
+
+#-------------------------------------------------------------------------------
+
+sub extract_annotations {
+    my ($content_ref) = @_;
+
+    my @annotations = $$content_ref =~ m/\@RequestMapping\s*\([^)]+\)/gs;
+
+    return @annotations;
+}
+
+#-------------------------------------------------------------------------------
+
+sub extract_route_config {
+    my ($annotation) = @_;
+
+    my ($annotation_content) = $annotation =~ m/\@RequestMapping\s*\( ( [^)]+ ) \)/sx;
+
+    my @keypairs = split /\s*,\s*/, $annotation_content;
+
+    my %config;
+
+    foreach my $pair (@keypairs) {
+        my ($k,$v) = split /\s*=\s*/, $pair, 2;
+
+        $v =~ s/^RequestMethod\.//;
+        $v =~ s/^['"]//;
+        $v =~ s/['"]$//;
+
+        $config{$k} = $v;
+    }
+
+    return \%config;
+}
+
+#-------------------------------------------------------------------------------
+
+sub find_files {
+    my @files = qx( git grep -l \@RequestMapping );
+    chomp @files;
+    return @files;
+}
+
+#-------------------------------------------------------------------------------
+
+sub extract_constants {
+    my ($content_ref) = @_;
+
+    my @constant_keys_and_values = $$content_ref =~ m#static.*?String\s+([A-Z_]+)\s+=\s+"([^"]+)"#g;
+
+    my %constants;
+
+    while (@constant_keys_and_values) {
+        $constants{ pop @constant_keys_and_values } = pop @constant_keys_and_values;
+    }
+
+    return \%constants;
+}

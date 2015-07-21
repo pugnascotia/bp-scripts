@@ -9,6 +9,7 @@ Useful scripts written by Black Pepper Software Ltd.
 	  history.
     - git-ls-flyway - list all [Flyway](http://www.flywaydb.org/) migration
       scripts in the order they will be run.
+	- git-ls-routes - list all the [Spring](https://spring.io/) routes and their HTTP methods
 - java/
 	- hamify - replaces JUnit assertions with Hamcrest versions
 - mvn/
