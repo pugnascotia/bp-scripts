@@ -14,7 +14,7 @@ use warnings;
 
 use File::Basename qw( basename );
 use List::Util qw( first );
-use Term::ANSIColor qw( :constants );
+use Term::ANSIColor qw( :constants :constants256 );
 
 # The directory containing the mvn or mvnDebug executables that we will wrap
 my $mvn_dir = '/usr/local/bin';
@@ -28,12 +28,14 @@ main();
 
 sub format_line {
     format_level();
+    format_level_with_timestamp();
     format_banner();
     format_test_summary();
     format_build_outcome();
     format_plugin_info();
     format_stacktrace();
     format_exceptions();
+    format_spring_startup();
 
     print $line;
 
@@ -108,6 +110,27 @@ sub format_level {
 
 #-------------------------------------------------------------------------------
 
+sub format_level_with_timestamp {
+    my ($level) = @_;
+
+    my %colors;
+    $colors{'WARN'} = YELLOW;
+    $colors{'WARNING'} = YELLOW;
+    $colors{'ERROR'} = RED;
+    $colors{'FATAL'} = RED;
+    $colors{'DEBUG'} = GREEN;
+    $colors{'INFO'} = CYAN;
+    $colors{'TRACE'} = MAGENTA;
+
+    my $regex = join '|', keys %colors;
+
+    $line =~ s/^(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d\d\d\s+)($regex)/GREEN . $1 . '  ' . $colors{trim($2)} . $2 . RESET/e;
+
+    $line =~ s/^(\d\d:\d\d:\d\d\.\d\d\d) (\s+) (\[ [^\]]+ \]) (\s+) ($regex)/GREEN . $1 . $2 . GREY14 . $3 . $4 . $colors{$5} . $5 . RESET/ex;
+}
+
+#-------------------------------------------------------------------------------
+
 sub format_banner {
 
     $line =~ s/(-{50,})$/BOLD . GREEN . $1 . RESET/e;
@@ -174,6 +197,12 @@ sub format_stacktrace {
 
 sub format_exceptions {
     $line =~ s/(\w+?Exception)\b/BOLD RED . $1 . RESET/ge;
+}
+
+#-------------------------------------------------------------------------------
+
+sub format_spring_startup {
+    $line =~ s/(Started \w+ in )([\d.]+)( seconds \(JVM running for )([\d.]+)(\))/GREEN . $1 . RED . $2 . GREEN . $3 . RED . $4 . GREEN . $5 . RESET/e;
 }
 
 #-------------------------------------------------------------------------------
